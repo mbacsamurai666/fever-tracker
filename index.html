@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e8505b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="บันทึกไข้">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>บันทึกไข้ & ยา</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f4f1; --card:#fff; --text:#24211f; --muted:#7b746d; --line:#e7e2dc;
+  --red:#e8505b; --red-soft:#fde8e9; --orange:#f08a24; --orange-soft:#fdf0e2;
+  --blue:#3b7dd8; --blue-soft:#e6effb; --green:#2f9e6b; --green-soft:#e2f4ea;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161413; --card:#22201e; --text:#f1ede9; --muted:#a39b93; --line:#36322f;
+    --red-soft:#3d2224; --orange-soft:#3b2b1b; --blue-soft:#1d2a3d; --green-soft:#1b3328;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Sarabun',system-ui,sans-serif;font-size:16px}
+body{padding:env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto;padding:12px 16px}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px}
+h1{font-size:1.35rem;margin:0}
+.sub{color:var(--muted);font-size:.85rem}
+.card{background:var(--card);border-radius:18px;padding:16px;margin:12px 0;box-shadow:var(--shadow);border:1px solid var(--line)}
+.card h2{font-size:1rem;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+
+/* status */
+.status{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{border-radius:14px;padding:12px}
+.stat .lbl{font-size:.8rem;color:var(--muted)}
+.stat .val{font-size:1.6rem;font-weight:700;line-height:1.2}
+.stat .meta{font-size:.78rem;color:var(--muted)}
+.stat.temp{background:var(--blue-soft)}
+.stat.temp.hot{background:var(--red-soft)}
+.stat.temp.hot .val{color:var(--red)}
+.stat.dose{background:var(--green-soft)}
+.stat.dose.wait{background:var(--orange-soft)}
+.stat.dose.wait .val{color:var(--orange)}
+.stat.dose.ok .val{color:var(--green)}
+.next{display:grid;gap:8px;margin-top:10px}
+.next-row{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;padding:8px 12px;border-radius:12px;background:var(--bg)}
+.next-row b{font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:99px;font-weight:600}
+.pill.ok{background:var(--green-soft);color:var(--green)}
+.pill.wait{background:var(--orange-soft);color:var(--orange)}
+
+/* buttons */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;border:0;cursor:pointer}
+.big{border-radius:16px;padding:16px 10px;font-weight:700;font-size:1.05rem;color:#fff;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:76px}
+.big small{font-weight:400;font-size:.78rem;opacity:.9}
+.big.temp{background:var(--blue);grid-column:1/-1}
+.big.strong{background:var(--red)}
+.big.normal{background:var(--orange)}
+.big:active{transform:scale(.98)}
+.ghost{background:transparent;color:var(--muted);font-size:.85rem;padding:6px 8px;border-radius:8px}
+.ghost:active{background:var(--line)}
+
+/* chart */
+.range{display:flex;gap:4px}
+.range button{background:var(--bg);color:var(--muted);padding:4px 10px;border-radius:99px;font-size:.8rem}
+.range button.on{background:var(--text);color:var(--card)}
+.chart-box{position:relative;height:260px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.empty{color:var(--muted);text-align:center;padding:30px 0;font-size:.9rem}
+
+/* history */
+.log{list-style:none;margin:0;padding:0}
+.log li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.log li:last-child{border-bottom:0}
+.ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:1.15rem;flex:none}
+.ico.t{background:var(--blue-soft)}
+.ico.t.hot{background:var(--red-soft)}
+.ico.s{background:var(--red-soft)}
+.ico.n{background:var(--orange-soft)}
+.log .txt{flex:1;min-width:0}
+.log .txt b{display:block}
+.log .txt span{font-size:.8rem;color:var(--muted)}
+.del{background:transparent;color:var(--muted);font-size:1.1rem;padding:6px 10px;border-radius:8px}
+.day{font-size:.78rem;color:var(--muted);font-weight:600;padding:10px 0 2px;border-bottom:1px solid var(--line)}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-bg.open{display:flex}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .2s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.5}}
+.sheet h3{margin:0 0 14px;font-size:1.15rem}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+input,select,textarea{font:inherit;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.temp-input{display:flex;align-items:center;gap:8px}
+.temp-input input{font-size:2rem;font-weight:700;text-align:center;padding:8px}
+.step{width:56px;height:56px;border-radius:14px;background:var(--bg);color:var(--text);font-size:1.6rem;flex:none;border:1px solid var(--line)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{background:var(--bg);color:var(--text);padding:8px 12px;border-radius:99px;border:1px solid var(--line);font-size:.9rem}
+.chips button.on{background:var(--text);color:var(--card);border-color:var(--text)}
+.sheet-actions{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:6px}
+.btn{padding:14px;border-radius:14px;font-weight:700}
+.btn.sec{background:var(--bg);color:var(--text)}
+.btn.pri{background:var(--text);color:var(--card)}
+.warn{background:var(--orange-soft);color:var(--orange);padding:10px 12px;border-radius:12px;font-size:.85rem;margin-bottom:12px;display:none}
+.warn.show{display:block}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--card);padding:10px 18px;border-radius:99px;font-size:.9rem;opacity:0;transition:.25s;pointer-events:none;z-index:20}
+.toast.show{opacity:1}
+.foot{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.note{font-size:.75rem;color:var(--muted);text-align:center;margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>🌡️ บันทึกไข้ & ยา</h1>
+      <div class="sub" id="clock"></div>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="status">
+      <div class="stat temp" id="stTemp">
+        <div class="lbl">อุณหภูมิล่าสุด</div>
+        <div class="val" id="stTempVal">–</div>
+        <div class="meta" id="stTempMeta">ยังไม่มีข้อมูล</div>
+      </div>
+      <div class="stat dose" id="stDose">
+        <div class="lbl">ยาลดไข้</div>
+        <div class="val" id="stDoseVal">–</div>
+        <div class="meta" id="stDoseMeta">ยังไม่ได้กินยา</div>
+      </div>
+    </div>
+    <div class="next" id="nextBox"></div>
+  </section>
+
+  <section class="actions">
+    <button class="big temp" onclick="openTemp()">🌡️ วัดไข้<small>บันทึกอุณหภูมิ</small></button>
+    <button class="big strong" onclick="openMed('strong')">💊 ยาลดไข้สูง<small>ทุก 6 ชม.</small></button>
+    <button class="big normal" onclick="openMed('normal')">💊 ยาลดไข้ธรรมดา<small>ทุก 4 ชม.</small></button>
+  </section>
+
+  <section class="card">
+    <h2>📈 กราฟ
+      <span class="range" id="range">
+        <button data-h="12">12ชม.</button>
+        <button data-h="24" class="on">24ชม.</button>
+        <button data-h="72">3วัน</button>
+        <button data-h="0">ทั้งหมด</button>
+      </span>
+    </h2>
+    <div class="chart-box"><canvas id="chart"></canvas><div class="empty" id="chartEmpty" style="display:none">ยังไม่มีข้อมูลในช่วงนี้</div></div>
+    <div class="legend">
+      <span><i style="background:var(--blue)"></i>อุณหภูมิ</span>
+      <span><i style="background:var(--red)"></i>ยาลดไข้สูง</span>
+      <span><i style="background:var(--orange)"></i>ยาลดไข้ธรรมดา</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>ประวัติ <span class="sub" id="count"></span></h2>
+    <ul class="log" id="log"></ul>
+  </section>
+
+  <div class="foot">
+    <button class="ghost" onclick="exportData()">⬇️ สำรองข้อมูล</button>
+    <button class="ghost" onclick="document.getElementById('imp').click()">⬆️ นำเข้า</button>
+    <button class="ghost" onclick="clearAll()">🗑️ ล้างทั้งหมด</button>
+    <input type="file" id="imp" accept="application/json" hidden onchange="importData(this)">
+  </div>
+  <p class="note">ข้อมูลเก็บไว้ในเครื่องนี้เท่านั้น · ใช้เพื่อช่วยจำ ไม่ใช่คำแนะนำทางการแพทย์<br>ไข้สูงเกิน 39°C หรือไม่ลดภายใน 2–3 วัน ควรพบแพทย์</p>
+</div>
+
+<!-- Sheet -->
+<div class="sheet-bg" id="sheetBg" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <h3 id="shTitle"></h3>
+    <div class="warn" id="shWarn"></div>
+    <div class="field" id="fTemp">
+      <label>อุณหภูมิ (°C)</label>
+      <div class="temp-input">
+        <button class="step" onclick="stepTemp(-0.1)">−</button>
+        <input id="inTemp" type="number" inputmode="decimal" step="0.1" min="34" max="43">
+        <button class="step" onclick="stepTemp(0.1)">+</button>
+      </div>
+    </div>
+    <div class="field" id="fMedName">
+      <label>ชื่อยา (ไม่บังคับ)</label>
+      <input id="inMedName" placeholder="เช่น พาราเซตามอล 500 mg">
+    </div>
+    <div class="field">
+      <label>เวลา</label>
+      <div class="chips" id="timeChips">
+        <button data-m="0" class="on">ตอนนี้</button>
+        <button data-m="15">15 นาทีก่อน</button>
+        <button data-m="30">30 นาทีก่อน</button>
+        <button data-m="60">1 ชม.ก่อน</button>
+      </div>
+      <input id="inTime" type="datetime-local" style="margin-top:8px">
+    </div>
+    <div class="field">
+      <label>หมายเหตุ (ไม่บังคับ)</label>
+      <input id="inNote" placeholder="เช่น ใช้ปรอทวัดใต้รักแร้">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn sec" onclick="closeSheet()">ยกเลิก</button>
+      <button class="btn pri" onclick="save()">บันทึก</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const MEDS = {
+  strong: { name: 'ยาลดไข้สูง', hours: 6, color: '#e8505b', icon: '💊' },
+  normal: { name: 'ยาลดไข้ธรรมดา', hours: 4, color: '#f08a24', icon: '💊' },
+};
+const KEY = 'fever-tracker-v1';
+const FEVER = 37.5;
+let data = load();
+let mode = null, rangeH = 24, chart;
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){ toast('บันทึกไม่สำเร็จ'); } }
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const fmtTime = t => { const d=new Date(t); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+const fmtDay = t => new Date(t).toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'});
+const toLocalInput = t => { const d=new Date(t); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); };
+function dur(ms){ const m=Math.max(0,Math.round(ms/60000)); const h=Math.floor(m/60); return h? `${h} ชม. ${m%60} นาที` : `${m} นาที`; }
+function ago(t){ const ms=Date.now()-t; return ms<60000?'เมื่อสักครู่':dur(ms)+'ที่แล้ว'; }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1800); }
+const sorted = () => [...data].sort((a,b)=>b.t-a.t);
+const lastOf = type => sorted().find(e=>e.type===type);
+
+/* ---------- Sheet ---------- */
+function openTemp(){
+  mode='temp';
+  $('shTitle').textContent='🌡️ บันทึกอุณหภูมิ';
+  $('fTemp').style.display=''; $('fMedName').style.display='none';
+  const last=lastOf('temp'); $('inTemp').value=(last?last.v:37.0).toFixed(1);
+  $('shWarn').classList.remove('show');
+  resetCommon(); $('sheetBg').classList.add('open');
+}
+function openMed(kind){
+  mode=kind; const m=MEDS[kind];
+  $('shTitle').textContent='💊 '+m.name+' (ทุก '+m.hours+' ชม.)';
+  $('fTemp').style.display='none'; $('fMedName').style.display='';
+  const last=lastOf(kind); $('inMedName').value=last&&last.name?last.name:'';
+  const w=$('shWarn'); const next=last?last.t+m.hours*3600e3:0;
+  if(last && next>Date.now()){
+    w.textContent=`⚠️ ยังไม่ครบ ${m.hours} ชม. — กินล่าสุด ${fmtTime(last.t)} ควรกินอีกครั้งได้ ${fmtTime(next)} (อีก ${dur(next-Date.now())})`;
+    w.classList.add('show');
+  } else w.classList.remove('show');
+  resetCommon(); $('sheetBg').classList.add('open');
+}
+function resetCommon(){
+  $('inNote').value=''; $('inTime').value=toLocalInput(Date.now());
+  [...$('timeChips').children].forEach((b,i)=>b.classList.toggle('on',i===0));
+}
+function closeSheet(){ $('sheetBg').classList.remove('open'); }
+function stepTemp(d){ const i=$('inTemp'); i.value=(Math.round(((parseFloat(i.value)||37)+d)*10)/10).toFixed(1); }
+$('timeChips').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...$('timeChips').children].forEach(x=>x.classList.toggle('on',x===b));
+  $('inTime').value=toLocalInput(Date.now()-b.dataset.m*60000);
+});
+$('inTime').addEventListener('input',()=>[...$('timeChips').children].forEach(x=>x.classList.remove('on')));
+
+function save(){
+  const t=new Date($('inTime').value).getTime();
+  if(!t||isNaN(t)) return toast('กรุณาใส่เวลา');
+  if(t>Date.now()+60000) return toast('เวลาต้องไม่เกินปัจจุบัน');
+  const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type:mode,t,note:$('inNote').value.trim()};
+  if(mode==='temp'){
+    const v=parseFloat($('inTemp').value);
+    if(isNaN(v)||v<34||v>43) return toast('อุณหภูมิควรอยู่ระหว่าง 34–43 °C');
+    e.v=Math.round(v*10)/10;
+  } else e.name=$('inMedName').value.trim();
+  data.push(e); persist(); closeSheet(); render(); toast('บันทึกแล้ว ✓');
+}
+function del(id){
+  const e=data.find(x=>x.id===id); if(!e) return;
+  const label=e.type==='temp'?`${e.v}°C`:MEDS[e.type].name;
+  if(!confirm(`ลบรายการ ${label} เวลา ${fmtTime(e.t)}?`)) return;
+  data=data.filter(x=>x.id!==id); persist(); render();
+}
+
+/* ---------- Render ---------- */
+function renderStatus(){
+  const lt=lastOf('temp');
+  if(lt){
+    $('stTempVal').textContent=lt.v.toFixed(1)+'°';
+    $('stTempMeta').textContent=fmtTime(lt.t)+' · '+ago(lt.t);
+    $('stTemp').classList.toggle('hot',lt.v>=FEVER);
+  }else{ $('stTempVal').textContent='–'; $('stTempMeta').textContent='ยังไม่มีข้อมูล'; $('stTemp').classList.remove('hot'); }
+
+  const now=Date.now(), rows=[]; let anyWait=false, anyDose=false, soonest=Infinity;
+  for(const k of ['strong','normal']){
+    const m=MEDS[k], last=lastOf(k);
+    if(!last){ rows.push(`<div class="next-row"><span>${m.name}</span><span class="sub">ยังไม่ได้กิน</span></div>`); continue; }
+    anyDose=true;
+    const next=last.t+m.hours*3600e3, wait=next>now;
+    if(wait){ anyWait=true; soonest=Math.min(soonest,next); }
+    rows.push(`<div class="next-row"><span>${m.name}<br><span class="sub">กินล่าสุด ${fmtTime(last.t)}</span></span>
+      <span style="text-align:right">${wait?`<span class="pill wait">อีก ${dur(next-now)}</span><br><b>${fmtTime(next)}</b>`:`<span class="pill ok">กินได้แล้ว</span>`}</span></div>`);
+  }
+  $('nextBox').innerHTML=rows.join('');
+  const sd=$('stDose'); sd.classList.remove('wait','ok');
+  if(!anyDose){ $('stDoseVal').textContent='–'; $('stDoseMeta').textContent='ยังไม่ได้กินยา'; }
+  else {
+    // "wait" only when every med already taken is still inside its interval
+    const allWaiting=['strong','normal'].filter(k=>lastOf(k)).every(k=>lastOf(k).t+MEDS[k].hours*3600e3>now);
+    if(allWaiting){ sd.classList.add('wait'); $('stDoseVal').textContent=fmtTime(soonest); $('stDoseMeta').textContent='กินได้อีกครั้งใน '+dur(soonest-now); }
+    else { sd.classList.add('ok'); $('stDoseVal').textContent='กินได้'; $('stDoseMeta').textContent='ครบเวลาแล้ว'; }
+  }
+}
+
+function renderLog(){
+  const list=sorted(); $('count').textContent=list.length?list.length+' รายการ':'';
+  if(!list.length){ $('log').innerHTML='<li class="empty" style="display:block;border:0">ยังไม่มีบันทึก กดปุ่มด้านบนเพื่อเริ่ม</li>'; return; }
+  let html='', day='';
+  for(const e of list.slice(0,200)){
+    const d=fmtDay(e.t); if(d!==day){ day=d; html+=`<li class="day">${d}</li>`; }
+    let ico, title, sub=fmtTime(e.t);
+    if(e.type==='temp'){ const hot=e.v>=FEVER; ico=`<div class="ico t${hot?' hot':''}">🌡️</div>`; title=`${e.v.toFixed(1)} °C ${hot?'<span class="pill wait">มีไข้</span>':''}`; }
+    else { const m=MEDS[e.type]; ico=`<div class="ico ${e.type==='strong'?'s':'n'}">💊</div>`; title=m.name+(e.name?` <span class="sub">· ${esc(e.name)}</span>`:''); sub+=` · ครั้งถัดไป ${fmtTime(e.t+m.hours*3600e3)}`; }
+    if(e.note) sub+=' · '+esc(e.note);
+    html+=`<li>${ico}<div class="txt"><b>${title}</b><span>${sub}</span></div><button class="del" onclick="del('${e.id}')" aria-label="ลบ">✕</button></li>`;
+  }
+  $('log').innerHTML=html;
+}
+function esc(s){ return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderChart(){
+  const now=Date.now(), from=rangeH?now-rangeH*3600e3:0;
+  const inR=data.filter(e=>e.t>=from).sort((a,b)=>a.t-b.t);
+  const temps=inR.filter(e=>e.type==='temp');
+  const meds=inR.filter(e=>e.type!=='temp');
+  const empty=!inR.length;
+  $('chartEmpty').style.display=empty?'block':'none'; $('chart').style.display=empty?'none':'block';
+  if(empty){ if(chart){chart.destroy();chart=null;} return; }
+
+  const css=getComputedStyle(document.documentElement);
+  const muted=css.getPropertyValue('--muted').trim(), line=css.getPropertyValue('--line').trim(), blue='#3b7dd8';
+  const vals=temps.map(e=>e.v);
+  const yMin=Math.floor(Math.min(36,...vals)-0.3), yMax=Math.ceil(Math.max(39,...vals)+0.3);
+  const minX=Math.min(...inR.map(e=>e.t)), maxX=Math.max(now,...inR.map(e=>e.t));
+  const span=maxX-minX||3600e3;
+
+  const ds=[{
+    label:'อุณหภูมิ', data:temps.map(e=>({x:e.t,y:e.v})), borderColor:blue, backgroundColor:blue,
+    pointBackgroundColor:temps.map(e=>e.v>=FEVER?'#e8505b':blue), pointRadius:5, pointHoverRadius:7,
+    borderWidth:2.5, tension:.3, order:1
+  }];
+  for(const k of ['strong','normal']){
+    const pts=meds.filter(e=>e.type===k);
+    ds.push({label:MEDS[k].name, type:'scatter', data:pts.map(e=>({x:e.t,y:yMin+ (k==='strong'?0.35:0.15)*(yMax-yMin)/4})),
+      pointStyle:'triangle', pointRadius:9, pointHoverRadius:11, backgroundColor:MEDS[k].color, borderColor:MEDS[k].color, order:0});
+  }
+  const fmtX=v=>{ const d=new Date(v); return span>36*3600e3? d.getDate()+'/'+(d.getMonth()+1)+' '+pad(d.getHours())+'h' : pad(d.getHours())+':'+pad(d.getMinutes()); };
+
+  const feverLine={id:'feverLine',beforeDatasetsDraw(c){
+    const {ctx,chartArea:a,scales:{y}}=c; const py=y.getPixelForValue(FEVER);
+    ctx.save(); ctx.fillStyle='rgba(232,80,91,.07)'; ctx.fillRect(a.left,a.top,a.right-a.left,py-a.top);
+    ctx.strokeStyle='rgba(232,80,91,.6)'; ctx.setLineDash([5,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(a.left,py); ctx.lineTo(a.right,py); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle='rgba(232,80,91,.85)'; ctx.font='11px Sarabun'; ctx.fillText(FEVER+'°',a.left+4,py-4); ctx.restore();
+  }};
+
+  if(chart) chart.destroy();
+  chart=new Chart($('chart'),{
+    type:'line', data:{datasets:ds}, plugins:[feverLine],
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{mode:'nearest',intersect:false},
+      layout:{padding:{right:6}},
+      scales:{
+        x:{type:'linear',min:minX-span*.03,max:maxX+span*.03,ticks:{color:muted,maxTicksLimit:6,callback:fmtX,font:{family:'Sarabun'}},grid:{color:line}},
+        y:{min:yMin,max:yMax,ticks:{color:muted,stepSize:1,callback:v=>v+'°',font:{family:'Sarabun'}},grid:{color:line}}
+      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title:i=>{const d=new Date(i[0].parsed.x);return fmtDay(d)+' '+fmtTime(d);},
+        label:i=>i.datasetIndex===0?` ${i.parsed.y.toFixed(1)} °C`:' '+i.dataset.label
+      }}}
+    }
+  });
+}
+
+function render(){ renderStatus(); renderLog(); renderChart(); }
+
+$('range').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...$('range').children].forEach(x=>x.classList.toggle('on',x===b));
+  rangeH=+b.dataset.h; renderChart();
+});
+
+/* ---------- Data ---------- */
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='fever-log-'+toLocalInput(Date.now()).replace(/[:T]/g,'-')+'.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function importData(inp){
+  const f=inp.files[0]; if(!f) return;
+  f.text().then(txt=>{
+    const arr=JSON.parse(txt); if(!Array.isArray(arr)) throw 0;
+    const ids=new Set(data.map(e=>e.id)); let n=0;
+    for(const e of arr){ if(e&&e.id&&e.t&&['temp','strong','normal'].includes(e.type)&&!ids.has(e.id)){ data.push(e); n++; } }
+    persist(); render(); toast(`นำเข้า ${n} รายการ`);
+  }).catch(()=>toast('ไฟล์ไม่ถูกต้อง')).finally(()=>inp.value='');
+}
+function clearAll(){
+  if(!data.length) return;
+  if(!confirm('ลบข้อมูลทั้งหมด? (ควรสำรองข้อมูลก่อน)')) return;
+  data=[]; persist(); render();
+}
+
+function tick(){ const d=new Date(); $('clock').textContent=d.toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long'})+' · '+fmtTime(d); renderStatus(); }
+render(); tick(); setInterval(tick,30000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ tick(); renderChart(); }});
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',renderChart);
+</script>
+</body>
+</html>
